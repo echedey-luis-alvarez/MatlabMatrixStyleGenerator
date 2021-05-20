@@ -1,9 +1,9 @@
-function output = MatrixatorAnimVideo(ResX,ResY,TrailLen,colorA,colorB,nFrames,ratios,varargin)
-showRendered = false;
+function output = MatrixatorAnimVideoWT(ResX,ResY,TrailLen,colorA,colorB,TextColor,nFrames,ratios,varargin)
+showRendered = true;
 ratios = ratios./sum(ratios);
-nVarargin = nargin - 7; % Dimension of varargin.
+nVarargin = nargin - 8; % Dimension of varargin.
                         % Change so that for a given number of arguments, nVarargin has the correct value.
-export_folder = "Rendered_imgs";
+export_folder = "Rendered_imgs\";
 % Checks:
 if exist("Charloader", "File") ~= 2 % Stop if CharLoader is not found
     disp("Error. Cannot find Charloader script.");
@@ -14,8 +14,8 @@ if nFrames>999 % Stop if user wants too many frames
     return;
 end
 if (exist(export_folder, "dir")~=7)
-    disp("Message. '"+export_folder+"' isn't in current folder. Creating folder...");
-    [status, msg] = mkdir(export_folder);
+    disp("Message. 'Rendered_imgs' isn't in current folder. Creatinf folder...");
+    [status, msg] = mkdir("Rendered_imgs");
     if status==0 % This means folder couldn't be created
         disp("Error. Cannot create folder.");
         disp(msg);
@@ -23,7 +23,16 @@ if (exist(export_folder, "dir")~=7)
     end
     disp(msg);
 end
-
+if sum(colorA) > 3
+    colorA = colorA/255;
+end
+if sum(colorB) > 3
+    colorB = colorB/255;
+end
+if sum(TextColor) > 3
+    TextColor = TextColor/255;
+end
+[TextH,TextS,~] = rgb2hsv(TextColor);
 % End of checks
 
 % pause(5)
@@ -53,11 +62,13 @@ characters = CharLoader();
 logo = (double(imread("Logo.png"))./255);
 logo = logo(:,:,1);
 internet = double(imread("Internet.png"))./255;
-internet = internet(:,:,1);
+internet = imresize(internet(:,:,1),size(logo));
 desde = double(imread("Desde.png"))./255;
-desde = desde(:,:,1);
+desde = imresize(desde(:,:,1),size(logo));
 abajo = double(imread("Abajo.png"))./255;
-abajo = abajo(:,:,1);
+abajo = imresize(abajo(:,:,1),size(logo));
+final = double(imread("Final.png"))./255;
+final = imresize(final(:,:,1),size(logo));
 
 % Mentioned logo, probably copy for other words
 whitemap = ones(size(logo));
@@ -113,7 +124,7 @@ output(:,:,3) = V;
 
 output = hsv2rgb(output);
 
-imwrite(output,export_folder+"/"+"Frame_0001.jpg");
+imwrite(output,export_folder+"Frame_0001.jpg");
 
 if showRendered
     imshow(output);
@@ -187,7 +198,7 @@ for frame = 2:ceil(nFrames*ratios(1))
         name = "Frame_"+frame;
     end
     name = name+".jpg";
-    imwrite(output,export_folder+"/"+name);
+    imwrite(output,export_folder+name);
     
     if showRendered
         imshow(output);
@@ -263,7 +274,7 @@ for frame = ceil(nFrames*ratios(1))+1:ceil(nFrames*sum(ratios(1:2)))
         name = "Frame_"+frame;
     end
     name = name+".jpg";
-    imwrite(output,export_folder+"/"+name);
+    imwrite(output,export_folder+name);
     
     if showRendered
         imshow(output);
@@ -339,7 +350,7 @@ for frame = ceil(nFrames*sum(ratios(1:2)))+1:ceil(nFrames*sum(ratios(1:3)))
         name = "Frame_"+frame;
     end
     name = name+".jpg";
-    imwrite(output,export_folder+"/"+name);
+    imwrite(output,export_folder+name);
 
     if showRendered
         imshow(output);
@@ -347,7 +358,7 @@ for frame = ceil(nFrames*sum(ratios(1:2)))+1:ceil(nFrames*sum(ratios(1:3)))
     end
 end
 
-for frame = ceil(nFrames*sum(ratios(1:3))):ceil(nFrames)
+for frame = ceil(nFrames*sum(ratios(1:3)))+1:ceil(nFrames*sum(ratios(1:4)))
     lineStart = Index*step-frame*step;
     lineEnd   = lineStart + step*(ResY-1);
     
@@ -415,9 +426,87 @@ for frame = ceil(nFrames*sum(ratios(1:3))):ceil(nFrames)
         name = "Frame_"+frame;
     end
     name = name+".jpg";
-    imwrite(output,export_folder+"/"+name);
+    imwrite(output,export_folder+name);
     
     if showRendered
+        imshow(output);
+        pause(0.1);
+    end
+end
+
+
+half = nFrames*(ratios(5)-ratios(4));
+for frame = ceil(nFrames*sum(ratios(1:4)))+1:ceil(nFrames)
+    lineStart = Index*step-frame*step;
+    lineEnd   = lineStart + step*(ResY-1);
+    
+    for x = 1:ResX
+        ShadowMap(:,x) = (lineStart(x):step:lineEnd(x))';
+    end
+    ShadowMap = ShadowMap-floor(ShadowMap);
+    ShadowMap(coordinates>(Index+frame)) = 0;
+    
+    
+    letters(2:ResY,:) = letters(1:ResY-1,:);
+    letters(1,:) = round((126-33)*rand(1,ResX))+33;
+    
+    for i=1:(nargin-5)
+        letters(mod(easterEggs{i,3}+frame,ResY)+1,easterEggs{i,2}+1:easterEggs{i,2}+size(easterEggs{i,1},2)) = easterEggs{i,1};
+        ShadowMap(mod(easterEggs{i,3}+frame,ResY)+1,easterEggs{i,2}+1:easterEggs{i,2}+size(easterEggs{i,1},2)) = min(ShadowMap(mod(easterEggs{i,3}+frame,ResY)+1,easterEggs{i,2}+1:easterEggs{i,2}+size(easterEggs{i,1},2)),1);
+    end
+    
+    %     ShadowMap = ShadowMap.*logo;
+    
+    CharMap = [characters{letters(1,:)}];
+    for y = 2:ResY
+        CharMap = [CharMap;[characters{letters(y,:)}]];
+    end
+    
+    factor = max(1-(2*(frame-ceil(nFrames*sum(ratios(1:4)))))/(3*nFrames*(ratios(5)-ratios(4))),0);
+    H(2:ResY,:) = H(1:ResY-1,:);
+    H(1,:) = rand(1,ResX)*(colorB(1)-colorA(1))+colorA(1);
+    H = factor*H+(1-factor)*TextH;
+    S(2:ResY,:) = S(1:ResY-1,:);
+    S(1,:) = rand(1,ResX)*(colorB(2)-colorA(2))+colorA(2);
+    S = factor*S+(1-factor)*TextH;
+    V = kron(ShadowMap,ones(9,7));
+    V = V.*CharMap;
+    
+    %     H = imresize(H,size(logo));
+    %     S = imresize(S,size(logo));
+    V = imresize(V,size(abajo),'nearest');
+    
+    %     V = V.*logo;
+    whitemap = min(logo.*internet.*desde.*abajo+(3*(frame-ceil(nFrames*sum(ratios(1:4)))))/(nFrames*(ratios(5)-ratios(4))),1);
+%         subplot(1,2,2);
+%         imshow(final)
+%         V = V.*logo;
+%     V = min(V+(1-internet).*(1-whitemap),1);
+    V = min((V+(1-whitemap)),1);
+%     V = V.*logo;
+    output(:,:,1) = imresize(kron(H,ones(9,7)),size(abajo),'nearest');
+    output(:,:,2) = imresize(kron(S,ones(9,7)),size(abajo),'nearest');%.*(1-whitemap);
+    output(:,:,3) = V.*min((factor+final),1)+min(max(frame-nFrames*sum(ratios(1:4))-half,0)/(2*half),1).*final;
+    disp(min(max(frame-nFrames*sum(ratios(1:4))-half,0)/(2*half),1))
+    output(:,:,3) = min(output(:,:,3),1);
+    output = hsv2rgb(output);
+    %subplot(1,1,1);
+
+    % Creating frames with a consistent name, ordered in directory
+    if frame < 10
+        name = "Frame_000"+frame;
+    elseif frame < 100
+        name = "Frame_00"+frame;
+    elseif frame < 1000
+        name = "Frame_0"+frame;
+    else
+        name = "Frame_"+frame;
+    end
+    name = name+".jpg";
+    imwrite(output,export_folder+name);
+    
+    if showRendered
+        subplot(1,1,1)
         imshow(output);
         pause(0.1);
     end
@@ -440,6 +529,6 @@ if showRendered
     subplot(1,1,1);
     
     imshow(output);
+    pause(0.1);
 end
-
 end

@@ -12,9 +12,10 @@ goto close
 
 :proceed
 @echo on
+cd Rendered_imgs
 del Frame_*.*
 echo Finished
-pause
+timeout /T 1
 goto close
 
 :close
